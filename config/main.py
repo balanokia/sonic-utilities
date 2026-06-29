@@ -7278,7 +7278,7 @@ def add_vrrp_ip(ctx, interface_name, vrrp_id, ip_addr):
 
     table_name = get_interface_table_name(interface_name)
     if table_name == "" or table_name == "LOOPBACK_INTERFACE":
-        ctx.fail("'interface_name' is not valid. Valid names [Ethernet/PortChannel/Vlan]")
+        ctx.fail("'interface_name' is not valid. Valid names [Ethernet/PortChannel/Vlan/<Port|PortChannel>.Vlan]")
     if interface_name not in config_db.get_table(table_name):
         ctx.fail("Router Interface '{}' not found".format(interface_name))
 
@@ -7339,7 +7339,7 @@ def remove_vrrp_ip(ctx, interface_name, vrrp_id, ip_addr):
 
     table_name = get_interface_table_name(interface_name)
     if table_name == "" or table_name == "LOOPBACK_INTERFACE":
-        ctx.fail("'interface_name' is not valid. Valid names [Ethernet/PortChannel/Vlan]")
+        ctx.fail("'interface_name' is not valid. Valid names [Ethernet/PortChannel/Vlan/<Port|PortChannel>.Vlan]")
     if interface_name not in config_db.get_table(table_name):
         ctx.fail("Router Interface '{}' not found".format(interface_name))
 
@@ -7403,7 +7403,7 @@ def add_track_interface(ctx, interface_name, vrrp_id, track_interface, priority_
 
     table_name_t = get_interface_table_name(track_interface)
     if table_name_t == "" or table_name_t == "LOOPBACK_INTERFACE":
-        ctx.fail("'track_interface' is not valid. Valid names [Ethernet/PortChannel/Vlan]")
+        ctx.fail("'track_interface' is not valid. Valid names [Ethernet/PortChannel/Vlan/<Port|PortChannel>.Vlan]")
     if track_interface not in config_db.get_table(table_name_t):
         ctx.fail("Router Interface '{}' not found".format(track_interface))
 
@@ -7452,13 +7452,13 @@ def remove_track_interface(ctx, interface_name, vrrp_id, track_interface):
 
     table_name = get_interface_table_name(interface_name)
     if table_name == "" or table_name == "LOOPBACK_INTERFACE":
-        ctx.fail("'interface_name' is not valid. Valid names [Ethernet/PortChannel/Vlan]")
+        ctx.fail("'interface_name' is not valid. Valid names [Ethernet/PortChannel/Vlan/<Port|PortChannel>.Vlan]")
     if interface_name not in config_db.get_table(table_name):
         ctx.fail("Router Interface '{}' not found".format(interface_name))
 
     table_name_t = get_interface_table_name(track_interface)
     if table_name_t == "" or table_name_t == "LOOPBACK_INTERFACE":
-        ctx.fail("'track_interface' is not valid. Valid names [Ethernet/PortChannel/Vlan]")
+        ctx.fail("'track_interface' is not valid. Valid names [Ethernet/PortChannel/Vlan/<Port|PortChannel>.Vlan]")
 
     vrrp_entry = config_db.get_entry("VRRP", (interface_name, str(vrrp_id)))
     if not vrrp_entry:
@@ -7836,7 +7836,7 @@ def add_track_interface_v6(ctx, interface_name, vrrp_id, track_interface, priori
 
     table_name_t = get_interface_table_name(track_interface)
     if table_name_t == "" or table_name_t == "LOOPBACK_INTERFACE":
-        ctx.fail("'track_interface' is not valid. Valid names [Ethernet/PortChannel/Vlan]")
+        ctx.fail("'track_interface' is not valid. Valid names [Ethernet/PortChannel/Vlan/<Port|PortChannel>.Vlan]")
     if track_interface not in config_db.get_table(table_name_t):
         ctx.fail("Router Interface '{}' not found".format(track_interface))
 
@@ -7882,13 +7882,13 @@ def remove_track_interface_v6(ctx, interface_name, vrrp_id, track_interface):
 
     table_name = get_interface_table_name(interface_name)
     if table_name == "" or table_name == "LOOPBACK_INTERFACE":
-        ctx.fail("'interface_name' is not valid. Valid names [Ethernet/PortChannel/Vlan]")
+        ctx.fail("'interface_name' is not valid. Valid names [Ethernet/PortChannel/Vlan/<Port|PortChannel>.Vlan]")
     if interface_name not in config_db.get_table(table_name):
         ctx.fail("Router Interface '{}' not found".format(interface_name))
 
     table_name_t = get_interface_table_name(track_interface)
     if table_name_t == "" or table_name_t == "LOOPBACK_INTERFACE":
-        ctx.fail("'track_interface' is not valid. Valid names [Ethernet/PortChannel/Vlan]")
+        ctx.fail("'track_interface' is not valid. Valid names [Ethernet/PortChannel/Vlan/<Port|PortChannel>.Vlan]")
 
     vrrp_entry = config_db.get_entry("VRRP6", (interface_name, str(vrrp_id)))
     if not vrrp_entry:
