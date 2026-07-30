@@ -7309,7 +7309,7 @@ def add_vrrp_ip(ctx, interface_name, vrrp_id, ip_addr):
             ctx.fail("Has already configured 254 vrrp instances")
         intf_cfg = 0
         for key in vrrp_keys:
-            if key[1] == str(vrrp_id):
+            if key[0] == interface_name and key[1] == str(vrrp_id):
                 ctx.fail("The vrrp instance {} has already configured!".format(vrrp_id))
             if key[0] == interface_name:
                 intf_cfg += 1
@@ -7625,7 +7625,7 @@ def add_vrrp(ctx, interface_name, vrrp_id):
             ctx.fail("Has already configured 254 vrrp instances!")
         intf_cfg = 0
         for key in vrrp_keys:
-            if key[1] == str(vrrp_id):
+            if key[0] == interface_name and key[1] == str(vrrp_id):
                 ctx.fail("The vrrp instance {} has already configured!".format(vrrp_id))
             if key[0] == interface_name:
                 intf_cfg += 1
@@ -7727,7 +7727,7 @@ def add_vrrp6_ipv6(ctx, interface_name, vrrp_id, ipv6_addr):
             ctx.fail("Has already configured 254 Vrrpv6 instances.")
         intf_cfg = 0
         for key in vrrp6_keys:
-            if key[1] == str(vrrp_id):
+            if key[0] == interface_name and key[1] == str(vrrp_id):
                 ctx.fail("The Vrrpv6 instance {} has already configured!".format(vrrp_id))
             if key[0] == interface_name:
                 intf_cfg += 1
@@ -8024,7 +8024,7 @@ def add_vrrp_v6(ctx, interface_name, vrrp_id):
             ctx.fail("Has already configured 254 Vrrpv6 instances!")
         intf_cfg = 0
         for key in vrrp6_keys:
-            if key[1] == str(vrrp_id):
+            if key[0] == interface_name and key[1] == str(vrrp_id):
                 ctx.fail("The Vrrpv6 instance {} has already configured!".format(vrrp_id))
             if key[0] == interface_name:
                 intf_cfg += 1

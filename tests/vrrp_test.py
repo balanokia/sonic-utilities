@@ -29,6 +29,111 @@ class TestConfigVRRP(object):
     def mock_run_bgp_command():
         return ""
 
+    def test_allow_same_vrrp_id_on_different_interfaces_with_vrrp_add(self):
+        db = Db()
+        runner = CliRunner()
+        obj = {'config_db': db.cfgdb}
+
+        result = runner.invoke(config.config.commands["interface"].commands["ip"].commands["add"],
+                               ["Ethernet64", "10.10.10.1/24"], obj=obj)
+        assert result.exit_code == 0
+        result = runner.invoke(config.config.commands["interface"].commands["ip"].commands["add"],
+                               ["Ethernet60", "9.9.9.1/24"], obj=obj)
+        assert result.exit_code == 0
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["add"],
+                               ["Ethernet64", "19"], obj=obj)
+        assert result.exit_code == 0
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["add"],
+                               ["Ethernet60", "19"], obj=obj)
+        assert result.exit_code == 0
+
+        assert ('Ethernet64', '19') in db.cfgdb.get_table('VRRP')
+        assert ('Ethernet60', '19') in db.cfgdb.get_table('VRRP')
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["add"],
+                               ["Ethernet64", "19"], obj=obj)
+        assert "Ethernet64 has already configured the vrrp instance 19!" in result.output
+        assert result.exit_code != 0
+
+    def test_allow_same_vrrp_id_on_different_interfaces_with_vrrp_ip_add(self):
+        db = Db()
+        runner = CliRunner()
+        obj = {'config_db': db.cfgdb}
+
+        result = runner.invoke(config.config.commands["interface"].commands["ip"].commands["add"],
+                               ["Ethernet64", "10.10.10.1/24"], obj=obj)
+        assert result.exit_code == 0
+        result = runner.invoke(config.config.commands["interface"].commands["ip"].commands["add"],
+                               ["Ethernet60", "9.9.9.1/24"], obj=obj)
+        assert result.exit_code == 0
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["ip"].commands["add"],
+                               ["Ethernet64", "21", "10.10.10.254/24"], obj=obj)
+        assert result.exit_code == 0
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["ip"].commands["add"],
+                               ["Ethernet60", "21", "9.9.9.254/24"], obj=obj)
+        assert result.exit_code == 0
+
+        assert ('Ethernet64', '21') in db.cfgdb.get_table('VRRP')
+        assert ('Ethernet60', '21') in db.cfgdb.get_table('VRRP')
+        assert db.cfgdb.get_table('VRRP')['Ethernet64', '21']['vip'] == ['10.10.10.254/24']
+        assert db.cfgdb.get_table('VRRP')['Ethernet60', '21']['vip'] == ['9.9.9.254/24']
+
+    def test_allow_same_vrrp6_id_on_different_interfaces_with_vrrp6_add(self):
+        db = Db()
+        runner = CliRunner()
+        obj = {'config_db': db.cfgdb}
+
+        result = runner.invoke(config.config.commands["interface"].commands["ip"].commands["add"],
+                               ["Ethernet64", "100::64/64"], obj=obj)
+        assert result.exit_code == 0
+        result = runner.invoke(config.config.commands["interface"].commands["ip"].commands["add"],
+                               ["Ethernet60", "99::64/64"], obj=obj)
+        assert result.exit_code == 0
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["add"],
+                               ["Ethernet64", "29"], obj=obj)
+        assert result.exit_code == 0
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["add"],
+                               ["Ethernet60", "29"], obj=obj)
+        assert result.exit_code == 0
+
+        assert ('Ethernet64', '29') in db.cfgdb.get_table('VRRP6')
+        assert ('Ethernet60', '29') in db.cfgdb.get_table('VRRP6')
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["add"],
+                               ["Ethernet64", "29"], obj=obj)
+        assert "Ethernet64 has already configured the Vrrpv6 instance 29!" in result.output
+        assert result.exit_code != 0
+
+    def test_allow_same_vrrp6_id_on_different_interfaces_with_vrrp6_ipv6_add(self):
+        db = Db()
+        runner = CliRunner()
+        obj = {'config_db': db.cfgdb}
+
+        result = runner.invoke(config.config.commands["interface"].commands["ip"].commands["add"],
+                               ["Ethernet64", "100::64/64"], obj=obj)
+        assert result.exit_code == 0
+        result = runner.invoke(config.config.commands["interface"].commands["ip"].commands["add"],
+                               ["Ethernet60", "99::64/64"], obj=obj)
+        assert result.exit_code == 0
+
+        result = runner.invoke(
+            config.config.commands["interface"].commands["vrrp6"].commands["ipv6"].commands["add"],
+            ["Ethernet64", "31", "100::fe/64"], obj=obj)
+        assert result.exit_code == 0
+
+        result = runner.invoke(
+            config.config.commands["interface"].commands["vrrp6"].commands["ipv6"].commands["add"],
+            ["Ethernet60", "31", "99::fe/64"], obj=obj)
+        assert result.exit_code == 0
+
+        assert ('Ethernet64', '31') in db.cfgdb.get_table('VRRP6')
+        assert ('Ethernet60', '31') in db.cfgdb.get_table('VRRP6')
+        assert db.cfgdb.get_table('VRRP6')['Ethernet64', '31']['vip'] == ['100::fe/64']
+        assert db.cfgdb.get_table('VRRP6')['Ethernet60', '31']['vip'] == ['99::fe/64']
+
     def test_add_del_vrrp_instance_without_vip(self):
         db = Db()
         runner = CliRunner()
