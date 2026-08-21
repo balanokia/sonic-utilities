@@ -7287,8 +7287,8 @@ def add_vrrp_ip(ctx, interface_name, vrrp_id, ip_addr):
     if check_vrrp_ip_exist(config_db, ip_addr):
         ctx.abort()
 
-    if "/" not in ip_addr:
-        ctx.fail("IP address {} is missing a mask. Such as xx.xx.xx.xx/yy or xx:xx::xx/yy".format(str(ip_addr)))
+    # Accept plain IP or CIDR; store canonical host IP (no mask) in CONFIG_DB.
+    normalized_ip = normalize_vrrp_vip(ip_addr)
 
     # check vip exist
     vrrp_entry = config_db.get_entry("VRRP", (interface_name, str(vrrp_id)))
@@ -7317,7 +7317,7 @@ def add_vrrp_ip(ctx, interface_name, vrrp_id, ip_addr):
                 ctx.fail("{} has already configured 16 vrrp instances!".format(interface_name))
         vrrp_entry["vid"] = vrrp_id
 
-    address_list.append(ip_addr)
+    address_list.append(normalized_ip)
     vrrp_entry['vip'] = address_list
 
     config_db.set_entry("VRRP", (interface_name, str(vrrp_id)), vrrp_entry)
@@ -7347,6 +7347,7 @@ def remove_vrrp_ip(ctx, interface_name, vrrp_id, ip_addr):
         ipaddress.ip_interface(ip_addr)
     except ValueError as err:
         ctx.fail("IP address is not valid: {}".format(err))
+    normalized_ip = normalize_vrrp_vip(ip_addr)
 
     vrrp_entry = config_db.get_entry("VRRP", (interface_name, str(vrrp_id)))
     if not vrrp_entry:
@@ -7357,11 +7358,15 @@ def remove_vrrp_ip(ctx, interface_name, vrrp_id, ip_addr):
     if not address_list:
         ctx.fail("{} is not configured on the vrrp instance {}!".format(ip_addr, vrrp_id))
 
-    # del ip address
-    if ip_addr in address_list:
-        address_list.remove(ip_addr)
-    else:
+    # del ip address (match plain IP or legacy CIDR form)
+    match_index = None
+    for idx, vip in enumerate(address_list):
+        if normalize_vrrp_vip(vip) == normalized_ip:
+            match_index = idx
+            break
+    if match_index is None:
         ctx.fail("{} is not configured on the vrrp instance {}!".format(ip_addr, vrrp_id))
+    address_list.pop(match_index)
     vrrp_entry['vip'] = address_list
     config_db.set_entry("VRRP", (interface_name, str(vrrp_id)), vrrp_entry)
 
@@ -7705,8 +7710,8 @@ def add_vrrp6_ipv6(ctx, interface_name, vrrp_id, ipv6_addr):
     if check_vrrp_ip_exist(config_db, ipv6_addr):
         ctx.abort()
 
-    if "/" not in ipv6_addr:
-        ctx.fail("IPv6 address {} is missing a mask. Such as xx:xx::xx/yy".format(str(ipv6_addr)))
+    # Accept plain IP or CIDR; store canonical host IP (no mask) in CONFIG_DB.
+    normalized_ip = normalize_vrrp_vip(ipv6_addr)
 
     # check vip exist
     vrrp6_entry = config_db.get_entry("VRRP6", (interface_name, str(vrrp_id)))
@@ -7735,7 +7740,7 @@ def add_vrrp6_ipv6(ctx, interface_name, vrrp_id, ipv6_addr):
                 ctx.fail("{} has already configured 16 Vrrpv6 instances!".format(interface_name))
         vrrp6_entry["vid"] = vrrp_id
 
-    address_list.append(ipv6_addr)
+    address_list.append(normalized_ip)
     vrrp6_entry['vip'] = address_list
 
     config_db.set_entry("VRRP6", (interface_name, str(vrrp_id)), vrrp6_entry)
@@ -7765,6 +7770,7 @@ def remove_vrrp_ipv6(ctx, interface_name, vrrp_id, ipv6_addr):
         ipaddress.ip_interface(ipv6_addr)
     except ValueError as err:
         ctx.fail("IPv6 address is not valid: {}".format(err))
+    normalized_ip = normalize_vrrp_vip(ipv6_addr)
 
     vrrp6_entry = config_db.get_entry("VRRP6", (interface_name, str(vrrp_id)))
     if not vrrp6_entry:
@@ -7775,24 +7781,39 @@ def remove_vrrp_ipv6(ctx, interface_name, vrrp_id, ipv6_addr):
     if not address_list:
         ctx.fail("{} is not configured on the Vrrpv6 instance {}!".format(ipv6_addr, vrrp_id))
 
-    # del ip address
-    if ipv6_addr in address_list:
-        address_list.remove(ipv6_addr)
-    else:
+    # del ip address (match plain IP or legacy CIDR form)
+    match_index = None
+    for idx, vip in enumerate(address_list):
+        if normalize_vrrp_vip(vip) == normalized_ip:
+            match_index = idx
+            break
+    if match_index is None:
         ctx.fail("{} is not configured on the Vrrpv6 instance {}!".format(ipv6_addr, vrrp_id))
+    address_list.pop(match_index)
     vrrp6_entry['vip'] = address_list
     config_db.set_entry("VRRP6", (interface_name, str(vrrp_id)), vrrp6_entry)
 
 
+def normalize_vrrp_vip(ip_addr: str) -> str:
+    """Canonical VRRP VIP for CONFIG_DB: host address without CIDR mask."""
+    try:
+        return str(ipaddress.ip_interface(str(ip_addr)).ip)
+    except ValueError:
+        return str(ip_addr)
+
+
 def check_vrrp_ip_exist(config_db, ip_addr) -> bool:
     addr_type = ipaddress.ip_interface(ip_addr).version
+    normalized_input = normalize_vrrp_vip(ip_addr)
     vrrp_table = "VRRP" if addr_type == 4 else "VRRP6"
     vrrp_keys = config_db.get_keys(vrrp_table)
     for vrrp_key in vrrp_keys:
         vrrp_entry = config_db.get_entry(vrrp_table, vrrp_key)
         if "vip" not in vrrp_entry:
             continue
-        if ip_addr in vrrp_entry["vip"]:
+        for vip in vrrp_entry["vip"]:
+            if normalize_vrrp_vip(vip) != normalized_input:
+                continue
             click.echo("{} has already configured on the {} vrrp instance {}!".format(ip_addr, vrrp_key[0],
                                                                                       vrrp_key[1]))
             return True
