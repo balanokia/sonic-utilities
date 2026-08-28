@@ -7326,20 +7326,20 @@ def is_vaild_intf_ip_addr(ip_addr) -> bool:
 
     if ip_address.version == 6:
         if ip_address.is_unspecified:
-            click.echo("IPv6 address {} is unspecified".format(str(ip_address)))
+            click.echo("IPv6 address {} is unspecified".format(str(ip_address.ip)))
             return False
     elif ip_address.version == 4:
         if str(ip_address.ip) == "0.0.0.0":
-            click.echo("IPv4 address {} is Zero".format(str(ip_address)))
+            click.echo("IPv4 address {} is Zero".format(str(ip_address.ip)))
             return False
 
     if ip_address.is_multicast:
-        click.echo("IP address {} is multicast".format(str(ip_address)))
+        click.echo("IP address {} is multicast".format(str(ip_address.ip)))
         return False
 
     ip = ip_address.ip
     if ip.is_loopback:
-        click.echo("IP address {} is loopback address".format(str(ip_address)))
+        click.echo("IP address {} is loopback address".format(str(ip_address.ip)))
         return False
 
     return True
@@ -7385,13 +7385,13 @@ def add_vrrp_ip(ctx, interface_name, vrrp_id, ip_addr):
     if interface_name not in config_db.get_table(table_name):
         ctx.fail("Router Interface '{}' not found".format(interface_name))
 
+    if "/" in ip_addr:
+        ctx.fail("IP address {} must not include a mask. Such as xx.xx.xx.xx".format(str(ip_addr)))
+
     if not is_vaild_intf_ip_addr(ip_addr):
         ctx.abort()
     if check_vrrp_ip_exist(config_db, ip_addr):
         ctx.abort()
-
-    if "/" not in ip_addr:
-        ctx.fail("IP address {} is missing a mask. Such as xx.xx.xx.xx/yy or xx:xx::xx/yy".format(str(ip_addr)))
 
     # check vip exist
     vrrp_entry = config_db.get_entry("VRRP", (interface_name, str(vrrp_id)))
@@ -7445,6 +7445,9 @@ def remove_vrrp_ip(ctx, interface_name, vrrp_id, ip_addr):
         ctx.fail("'interface_name' is not valid. Valid names [Ethernet/PortChannel/Vlan/<Port|PortChannel>.Vlan]")
     if interface_name not in config_db.get_table(table_name):
         ctx.fail("Router Interface '{}' not found".format(interface_name))
+
+    if "/" in ip_addr:
+        ctx.fail("IP address {} must not include a mask. Such as xx.xx.xx.xx".format(str(ip_addr)))
 
     try:
         ipaddress.ip_interface(ip_addr)
@@ -7803,13 +7806,13 @@ def add_vrrp6_ipv6(ctx, interface_name, vrrp_id, ipv6_addr):
     if interface_name not in config_db.get_table(table_name):
         ctx.fail("Router Interface '{}' not found".format(interface_name))
 
+    if "/" in ipv6_addr:
+        ctx.fail("IPv6 address {} must not include a mask. Such as xx:xx::xx".format(str(ipv6_addr)))
+
     if not is_vaild_intf_ip_addr(ipv6_addr):
         ctx.abort()
     if check_vrrp_ip_exist(config_db, ipv6_addr):
         ctx.abort()
-
-    if "/" not in ipv6_addr:
-        ctx.fail("IPv6 address {} is missing a mask. Such as xx:xx::xx/yy".format(str(ipv6_addr)))
 
     # check vip exist
     vrrp6_entry = config_db.get_entry("VRRP6", (interface_name, str(vrrp_id)))
@@ -7863,6 +7866,9 @@ def remove_vrrp_ipv6(ctx, interface_name, vrrp_id, ipv6_addr):
         ctx.fail("'interface_name' is not valid. Valid names [Ethernet/PortChannel/Vlan]")
     if interface_name not in config_db.get_table(table_name):
         ctx.fail("Router Interface '{}' not found".format(interface_name))
+
+    if "/" in ipv6_addr:
+        ctx.fail("IPv6 address {} must not include a mask. Such as xx:xx::xx".format(str(ipv6_addr)))
 
     try:
         ipaddress.ip_interface(ipv6_addr)
