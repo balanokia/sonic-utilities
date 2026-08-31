@@ -1056,36 +1056,36 @@ class TestConfigVRRP(object):
         assert db.cfgdb.get_table('VRRP')['Ethernet64', '8']['vip'] == ['10.10.10.8']
 
         # check interface_name is valid
-        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["pre_empt"],
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["preempt"],
                                ["Ethernt64", "8", "disabled"], obj=obj)
         print(result.exit_code, result.output)
         assert "'interface_name' is not valid" in result.output
         assert result.exit_code != 0
 
         # check interface is Router interface
-        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["pre_empt"],
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["preempt"],
                                ["Ethernet2", "8", "disabled"], obj=obj)
         print(result.exit_code, result.output)
         assert "Router Interface 'Ethernet2' not found" in result.output
         assert result.exit_code != 0
 
         # check the vrrp instance is valid
-        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["pre_empt"],
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["preempt"],
                                ["Ethernet64", "9", "disabled"], obj=obj)
         print(result.exit_code, result.output)
         assert "vrrp instance 9 not found on interface Ethernet64" in result.output
         assert result.exit_code != 0
 
-        # config interface vrrp vrrp pre_empt Ethernet64 8 disabled
-        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["pre_empt"],
+        # config interface vrrp vrrp preempt Ethernet64 8 disabled
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["preempt"],
                                ["Ethernet64", "8", "disabled"], obj=obj)
         print(result.exit_code, result.output)
         assert result.exit_code == 0
         assert ('Ethernet64', '8') in db.cfgdb.get_table('VRRP')
         assert db.cfgdb.get_table('VRRP')['Ethernet64', '8']['preempt'] == 'disabled'
 
-        # config interface vrrp vrrp pre_empt Ethernet64 8 enabled
-        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["pre_empt"],
+        # config interface vrrp preempt Ethernet64 8 enabled
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["preempt"],
                                ["Ethernet64", "8", "enabled"], obj=obj)
         print(result.exit_code, result.output)
         assert result.exit_code == 0
@@ -1129,36 +1129,36 @@ class TestConfigVRRP(object):
         assert db.cfgdb.get_table('VRRP6')['Ethernet64', '8']['vip'] == ['10::1']
 
         # check interface_name is valid
-        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["pre_empt"],
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["preempt"],
                                ["Ethernt64", "8", "disabled"], obj=obj)
         print(result.exit_code, result.output)
         assert "'interface_name' is not valid" in result.output
         assert result.exit_code != 0
 
         # check interface is Router interface
-        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["pre_empt"],
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["preempt"],
                                ["Ethernet2", "8", "disabled"], obj=obj)
         print(result.exit_code, result.output)
         assert "Router Interface 'Ethernet2' not found" in result.output
         assert result.exit_code != 0
 
         # check the vrrp6 instance is valid
-        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["pre_empt"],
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["preempt"],
                                ["Ethernet64", "9", "disabled"], obj=obj)
         print(result.exit_code, result.output)
         assert "Vrrpv6 instance 9 not found on interface Ethernet64" in result.output
         assert result.exit_code != 0
 
-        # config interface vrrp6 pre_empt Ethernet64 8 disabled
-        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["pre_empt"],
+        # config interface vrrp6 preempt Ethernet64 8 disabled
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["preempt"],
                                ["Ethernet64", "8", "disabled"], obj=obj)
         print(result.exit_code, result.output)
         assert result.exit_code == 0
         assert ('Ethernet64', '8') in db.cfgdb.get_table('VRRP6')
         assert db.cfgdb.get_table('VRRP6')['Ethernet64', '8']['preempt'] == 'disabled'
 
-        # config interface vrrp vrrp pre_empt Ethernet64 8 enabled
-        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["pre_empt"],
+        # config interface vrrp6 preempt Ethernet64 8 enabled
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["preempt"],
                                ["Ethernet64", "8", "enabled"], obj=obj)
         print(result.exit_code, result.output)
         assert result.exit_code == 0
@@ -1180,6 +1180,82 @@ class TestConfigVRRP(object):
             assert result.exit_code == 0
             assert mock_run_command.call_count == 1
             assert ('Ethernet64', '10::8/64') not in db.cfgdb.get_table('INTERFACE')
+
+    def test_shutdown_startup_vrrp_instance(self):
+        db = Db()
+        runner = CliRunner()
+        obj = {'config_db': db.cfgdb}
+
+        result = runner.invoke(config.config.commands["interface"].commands["ip"].commands["add"],
+                               ["Ethernet64", "10.10.10.1/24"], obj=obj)
+        assert result.exit_code == 0
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["ip"].commands["add"],
+                               ["Ethernet64", "8", "10.10.10.8"], obj=obj)
+        assert result.exit_code == 0
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["shutdown"],
+                               ["Ethernt64", "8"], obj=obj)
+        assert "'interface_name' is not valid" in result.output
+        assert result.exit_code != 0
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["shutdown"],
+                               ["Ethernet2", "8"], obj=obj)
+        assert "Router Interface 'Ethernet2' not found" in result.output
+        assert result.exit_code != 0
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["shutdown"],
+                               ["Ethernet64", "9"], obj=obj)
+        assert "vrrp instance 9 not found on interface Ethernet64" in result.output
+        assert result.exit_code != 0
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["shutdown"],
+                               ["Ethernet64", "8"], obj=obj)
+        assert result.exit_code == 0
+        assert db.cfgdb.get_table('VRRP')['Ethernet64', '8']['admin_status'] == 'down'
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["startup"],
+                               ["Ethernet64", "8"], obj=obj)
+        assert result.exit_code == 0
+        assert db.cfgdb.get_table('VRRP')['Ethernet64', '8']['admin_status'] == 'up'
+
+    def test_shutdown_startup_vrrp6_instance(self):
+        db = Db()
+        runner = CliRunner()
+        obj = {'config_db': db.cfgdb}
+
+        result = runner.invoke(config.config.commands["interface"].commands["ip"].commands["add"],
+                               ["Ethernet64", "10::8/64"], obj=obj)
+        assert result.exit_code == 0
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["ipv6"].commands["add"],
+                               ["Ethernet64", "8", "10::1"], obj=obj)
+        assert result.exit_code == 0
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["shutdown"],
+                               ["Ethernt64", "8"], obj=obj)
+        assert "'interface_name' is not valid" in result.output
+        assert result.exit_code != 0
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["shutdown"],
+                               ["Ethernet2", "8"], obj=obj)
+        assert "Router Interface 'Ethernet2' not found" in result.output
+        assert result.exit_code != 0
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["shutdown"],
+                               ["Ethernet64", "9"], obj=obj)
+        assert "Vrrpv6 instance 9 not found on interface Ethernet64" in result.output
+        assert result.exit_code != 0
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["shutdown"],
+                               ["Ethernet64", "8"], obj=obj)
+        assert result.exit_code == 0
+        assert db.cfgdb.get_table('VRRP6')['Ethernet64', '8']['admin_status'] == 'down'
+
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["startup"],
+                               ["Ethernet64", "8"], obj=obj)
+        assert result.exit_code == 0
+        assert db.cfgdb.get_table('VRRP6')['Ethernet64', '8']['admin_status'] == 'up'
 
     def test_config_vrrp_instance_adv_interval(self):
         db = Db()
