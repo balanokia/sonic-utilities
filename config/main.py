@@ -1734,7 +1734,7 @@ def config_file_yang_validation(filename):
             config_to_check = config if scope == HOST_NAMESPACE else None
         if config_to_check:
             try:
-                sy.loadData(configdbJson=config_to_check)
+                sy.loadData(configdbJson=get_vrrp_yang_validation_view(config_to_check))
                 sy.validate_data_tree()
             except sonic_yang.SonicYangException as e:
                 click.secho("{} fails YANG validation! Error: {}".format(filename, str(e)),
@@ -1747,6 +1747,47 @@ def config_file_yang_validation(filename):
                         fg='magenta')
             raise click.Abort()
     return True
+
+
+def get_vrrp_yang_validation_view(config_to_check):
+    """
+    Build a validation-only view for VRRP tables.
+    This helper does not modify runtime config or persisted DB content.
+    """
+    validation_view = copy.deepcopy(config_to_check)
+
+    for table_name in ("VRRP", "VRRP6"):
+        table = validation_view.get(table_name)
+        if not isinstance(table, dict):
+            continue
+
+        for _, entry in table.items():
+            if not isinstance(entry, dict):
+                continue
+
+            if "vid" in entry and "vrid" not in entry:
+                entry["vrid"] = entry["vid"]
+            entry.pop("vid", None)
+
+            for vip_key in ("vip", "vip@"):
+                if vip_key not in entry:
+                    continue
+
+                value = entry[vip_key]
+                vip_values = value if isinstance(value, list) else [value]
+                normalized = []
+                for vip in vip_values:
+                    vip_str = str(vip).strip()
+                    if "/" in vip_str:
+                        try:
+                            vip_str = str(ipaddress.ip_interface(vip_str).ip)
+                        except ValueError:
+                            # Keep original and let strict validation report it.
+                            pass
+                    normalized.append(vip_str)
+                entry[vip_key] = normalized
+
+    return validation_view
 
 
 def check_dhcpv4_relay_dependencies(db, object_name, object_type):
@@ -7412,16 +7453,19 @@ def add_vrrp_ip(ctx, interface_name, vrrp_id, ip_addr):
             ctx.fail("Has already configured 254 vrrp instances")
         intf_cfg = 0
         for key in vrrp_keys:
-            if key[1] == str(vrrp_id):
+            if key[0] == interface_name and key[1] == str(vrrp_id):
                 ctx.fail("The vrrp instance {} has already configured!".format(vrrp_id))
             if key[0] == interface_name:
                 intf_cfg += 1
             if intf_cfg >= 16:
                 ctx.fail("{} has already configured 16 vrrp instances!".format(interface_name))
-        vrrp_entry["vid"] = vrrp_id
+        vrrp_entry["vrid"] = vrrp_id
 
     address_list.append(ip_addr)
     vrrp_entry['vip'] = address_list
+    if "vrid" not in vrrp_entry:
+        vrrp_entry["vrid"] = vrrp_id
+    vrrp_entry.pop("vid", None)
 
     config_db.set_entry("VRRP", (interface_name, str(vrrp_id)), vrrp_entry)
 
@@ -7791,14 +7835,14 @@ def add_vrrp(ctx, interface_name, vrrp_id):
             ctx.fail("Has already configured 254 vrrp instances!")
         intf_cfg = 0
         for key in vrrp_keys:
-            if key[1] == str(vrrp_id):
+            if key[0] == interface_name and key[1] == str(vrrp_id):
                 ctx.fail("The vrrp instance {} has already configured!".format(vrrp_id))
             if key[0] == interface_name:
                 intf_cfg += 1
             if intf_cfg >= 16:
                 ctx.fail("{} has already configured 16 vrrp instances!".format(interface_name))
 
-        config_db.set_entry('VRRP', (interface_name, str(vrrp_id)), {"vid": vrrp_id})
+        config_db.set_entry('VRRP', (interface_name, str(vrrp_id)), {"vrid": vrrp_id})
 
 
 @vrrp.command("remove")
@@ -7893,16 +7937,19 @@ def add_vrrp6_ipv6(ctx, interface_name, vrrp_id, ipv6_addr):
             ctx.fail("Has already configured 254 Vrrpv6 instances.")
         intf_cfg = 0
         for key in vrrp6_keys:
-            if key[1] == str(vrrp_id):
+            if key[0] == interface_name and key[1] == str(vrrp_id):
                 ctx.fail("The Vrrpv6 instance {} has already configured!".format(vrrp_id))
             if key[0] == interface_name:
                 intf_cfg += 1
             if intf_cfg >= 16:
                 ctx.fail("{} has already configured 16 Vrrpv6 instances!".format(interface_name))
-        vrrp6_entry["vid"] = vrrp_id
+        vrrp6_entry["vrid"] = vrrp_id
 
     address_list.append(ipv6_addr)
     vrrp6_entry['vip'] = address_list
+    if "vrid" not in vrrp6_entry:
+        vrrp6_entry["vrid"] = vrrp_id
+    vrrp6_entry.pop("vid", None)
 
     config_db.set_entry("VRRP6", (interface_name, str(vrrp_id)), vrrp6_entry)
 
@@ -8253,14 +8300,14 @@ def add_vrrp_v6(ctx, interface_name, vrrp_id):
             ctx.fail("Has already configured 254 Vrrpv6 instances!")
         intf_cfg = 0
         for key in vrrp6_keys:
-            if key[1] == str(vrrp_id):
+            if key[0] == interface_name and key[1] == str(vrrp_id):
                 ctx.fail("The Vrrpv6 instance {} has already configured!".format(vrrp_id))
             if key[0] == interface_name:
                 intf_cfg += 1
             if intf_cfg >= 16:
                 ctx.fail("{} has already configured 16 Vrrpv6 instances!".format(interface_name))
 
-        config_db.set_entry('VRRP6', (interface_name, str(vrrp_id)), {"vid": vrrp_id})
+        config_db.set_entry('VRRP6', (interface_name, str(vrrp_id)), {"vrid": vrrp_id})
 
 
 @vrrp6.command("remove")
