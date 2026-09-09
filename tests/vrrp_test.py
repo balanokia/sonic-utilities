@@ -307,12 +307,12 @@ class TestConfigVRRP(object):
         assert "IP address 224.0.0.41 is multicast" in result.output
         assert result.exit_code != 0
 
-        # config int vrrp ip add Ethernet68 7 6.6.6.6
+        # config int vrrp ip add Ethernet68 7 8.8.8.6
         result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["ip"].commands["add"],
-                               ["Ethernet68", "7", "6.6.6.6"], obj=obj)
+                               ["Ethernet68", "7", "8.8.8.6"], obj=obj)
         print(result.exit_code, result.output)
         assert result.exit_code == 0
-        assert db.cfgdb.get_table('VRRP')['Ethernet68', '7']['vip'] == ['8.8.8.16', '6.6.6.6']
+        assert db.cfgdb.get_table('VRRP')['Ethernet68', '7']['vip'] == ['8.8.8.16', '8.8.8.6']
 
         # config int vrrp ip add Ethernet68 7 6.6.6.7/24
         result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["ip"].commands["add"],
@@ -320,7 +320,7 @@ class TestConfigVRRP(object):
         print(result.exit_code, result.output)
         assert "IP address 6.6.6.7/24 must not include a mask." in result.output
         assert result.exit_code != 0
-        assert db.cfgdb.get_table('VRRP')['Ethernet68', '7']['vip'] == ['8.8.8.16', '6.6.6.6']
+        assert db.cfgdb.get_table('VRRP')['Ethernet68', '7']['vip'] == ['8.8.8.16', '8.8.8.6']
 
         # config int vrrp ip remove Ethernet64 8 10.10.10.8
         result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["ip"].commands["remove"],

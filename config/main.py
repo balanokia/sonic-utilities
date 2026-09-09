@@ -7433,6 +7433,8 @@ def add_vrrp_ip(ctx, interface_name, vrrp_id, ip_addr):
         ctx.abort()
     if check_vrrp_ip_exist(config_db, ip_addr):
         ctx.abort()
+    if not check_vip_parent_subnet(config_db, ip_addr, interface_name):
+        ctx.fail("VIP {} is not in the same subnet of parent interface {}".format(ip_addr, interface_name))
 
     # check vip exist
     vrrp_entry = config_db.get_entry("VRRP", (interface_name, str(vrrp_id)))
@@ -7917,6 +7919,8 @@ def add_vrrp6_ipv6(ctx, interface_name, vrrp_id, ipv6_addr):
         ctx.abort()
     if check_vrrp_ip_exist(config_db, ipv6_addr):
         ctx.abort()
+    if not check_vip_parent_subnet(config_db, ipv6_addr, interface_name):
+        ctx.fail("VIP {} is not in the same subnet of parent interface {}".format(ipv6_addr, interface_name))
 
     # check vip exist
     vrrp6_entry = config_db.get_entry("VRRP6", (interface_name, str(vrrp_id)))
@@ -8012,6 +8016,25 @@ def check_vrrp_ip_exist(config_db, ip_addr) -> bool:
             click.echo("{} has already configured on the {} vrrp instance {}!".format(ip_addr, vrrp_key[0],
                                                                                       vrrp_key[1]))
             return True
+    return False
+
+
+def check_vip_parent_subnet(config_db, vip, interface_name):
+    table_name = get_interface_table_name(interface_name)
+    vip_addr = ipaddress.ip_address(vip)
+
+    for key in config_db.get_table(table_name):
+        if not (isinstance(key, tuple) and len(key) >= 2 and key[0] == interface_name):
+            continue
+
+        try:
+            parent = ipaddress.ip_interface(key[1])
+        except ValueError:
+            continue
+
+        if parent.version == vip_addr.version and vip_addr in parent.network:
+            return True
+
     return False
 
 
