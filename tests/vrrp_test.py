@@ -358,7 +358,14 @@ class TestConfigVRRP(object):
         print(result.exit_code, result.output)
         assert result.exit_code == 0
         assert ('Ethernet64', '8') in db.cfgdb.get_table('VRRP')
-        assert db.cfgdb.get_table('VRRP')['Ethernet64', '8']['vip'] == ['']
+        assert 'vip' not in db.cfgdb.get_table('VRRP')['Ethernet64', '8']
+
+        # config int vrrp ip add Ethernet64 8 10.10.10.16
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["ip"].commands["add"],
+                               ["Ethernet64", "8", "10.10.10.16"], obj=obj)
+        print(result.exit_code, result.output)
+        assert result.exit_code == 0
+        assert db.cfgdb.get_table('VRRP')['Ethernet64', '8']['vip'] == ['10.10.10.16']
 
         # config int vrrp remove Ethernet64 8
         result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["remove"],
@@ -548,7 +555,15 @@ class TestConfigVRRP(object):
         print(result.exit_code, result.output)
         assert result.exit_code == 0
         assert ('Ethernet64', '8') in db.cfgdb.get_table('VRRP6')
-        assert db.cfgdb.get_table('VRRP6')['Ethernet64', '8']['vip'] == ['']
+        assert 'vip' not in db.cfgdb.get_table('VRRP6')['Ethernet64', '8']
+
+        # config int vrrp6 ipv6 add Ethernet64 8 100::16
+        result = runner.invoke(
+            config.config.commands["interface"].commands["vrrp6"].commands["ipv6"].commands["add"],
+            ["Ethernet64", "8", "100::16"], obj=obj)
+        print(result.exit_code, result.output)
+        assert result.exit_code == 0
+        assert db.cfgdb.get_table('VRRP6')['Ethernet64', '8']['vip'] == ['100::16']
 
         # config int vrrp6 remove Ethernet64 8
         result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["remove"],

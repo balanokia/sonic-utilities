@@ -7514,7 +7514,12 @@ def remove_vrrp_ip(ctx, interface_name, vrrp_id, ip_addr):
         address_list.remove(ip_addr)
     else:
         ctx.fail("{} is not configured on the vrrp instance {}!".format(ip_addr, vrrp_id))
-    vrrp_entry['vip'] = address_list
+
+    if address_list:
+        vrrp_entry['vip'] = address_list
+    else:
+        vrrp_entry.pop('vip', None)
+
     config_db.set_entry("VRRP", (interface_name, str(vrrp_id)), vrrp_entry)
 
 
@@ -8000,7 +8005,12 @@ def remove_vrrp_ipv6(ctx, interface_name, vrrp_id, ipv6_addr):
         address_list.remove(ipv6_addr)
     else:
         ctx.fail("{} is not configured on the Vrrpv6 instance {}!".format(ipv6_addr, vrrp_id))
-    vrrp6_entry['vip'] = address_list
+
+    if address_list:
+        vrrp6_entry['vip'] = address_list
+    else:
+        vrrp6_entry.pop('vip', None)
+
     config_db.set_entry("VRRP6", (interface_name, str(vrrp_id)), vrrp6_entry)
 
 
