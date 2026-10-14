@@ -6375,6 +6375,13 @@ def remove(ctx, interface_name, ip_addr):
     if table_name == "":
         ctx.fail("'interface_name' is not valid. Valid names [Ethernet/PortChannel/Vlan/Loopback]")
     interface_addresses = get_interface_ipaddresses(config_db, interface_name)
+    if ip_address in interface_addresses:
+        conflicts = vrrp_list_owned_prefix_conflicts(config_db, interface_name, ip_address)
+        if conflicts:
+            verb = "is" if len(conflicts) == 1 else "are"
+            ctx.fail(
+                "Cannot remove IP {} from interface {}. {} {} associated with this prefix."
+                .format(ip_address, interface_name, ", ".join(conflicts), verb))
     # If we deleting the last IP entry of the interface, check whether a static route present for the RIF
     # before deleting the entry and also the RIF.
     if interface_addresses == {ip_address}:
@@ -8046,6 +8053,56 @@ def check_vip_parent_subnet(config_db, vip, interface_name):
             return True
 
     return False
+
+
+def vrrp_owned_parent_prefix(vip, parent_prefixes):
+    try:
+        vip_addr = ipaddress.ip_address(str(vip).split('/')[0])
+    except ValueError:
+        return None
+
+    best = None
+    best_len = -1
+    for pref in parent_prefixes:
+        try:
+            iface = ipaddress.ip_interface(str(pref))
+        except ValueError:
+            continue
+        if iface.version != vip_addr.version:
+            continue
+        if vip_addr in iface.network and iface.network.prefixlen > best_len:
+            best = iface
+            best_len = iface.network.prefixlen
+    return best
+
+
+def _vrrp_entry_vips(entry):
+    vips = (entry or {}).get("vip") or (entry or {}).get("vip@") or []
+    if isinstance(vips, str):
+        vips = [v.strip() for v in vips.split(",") if v.strip()]
+    return vips
+
+
+def vrrp_list_owned_prefix_conflicts(config_db, interface_name, ip_to_remove):
+    """Return VIP details if removed ip is LPM owner of an active VRRP VIP"""
+    try:
+        removing = ipaddress.ip_interface(str(ip_to_remove))
+    except ValueError:
+        return []
+
+    parents = get_interface_ipaddresses(config_db, interface_name)
+    details = []
+    table = "VRRP" if removing.version == 4 else "VRRP6"
+    for key in config_db.get_keys(table):
+        if not (isinstance(key, tuple) and len(key) >= 2 and key[0] == interface_name):
+            continue
+        vrid = key[1]
+        for vip in _vrrp_entry_vips(config_db.get_entry(table, key)):
+            owner = vrrp_owned_parent_prefix(vip, parents)
+            if owner is not None and owner == removing:
+                details.append("{} VIP {} (VR Id: {})".format(
+                    table, str(vip).split("/")[0], vrid))
+    return details
 
 
 #
