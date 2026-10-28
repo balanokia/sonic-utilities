@@ -8071,7 +8071,7 @@ def vrrp_owned_parent_prefix(vip, parent_prefixes):
         if iface.version != vip_addr.version:
             continue
         if vip_addr in iface.network and iface.network.prefixlen > best_len:
-            best = iface
+            best = iface.network
             best_len = iface.network.prefixlen
     return best
 
@@ -8084,7 +8084,6 @@ def _vrrp_entry_vips(entry):
 
 
 def vrrp_list_owned_prefix_conflicts(config_db, interface_name, ip_to_remove):
-    """Return VIP details if removed ip is LPM owner of an active VRRP VIP"""
     try:
         removing = ipaddress.ip_interface(str(ip_to_remove))
     except ValueError:
@@ -8099,7 +8098,7 @@ def vrrp_list_owned_prefix_conflicts(config_db, interface_name, ip_to_remove):
         vrid = key[1]
         for vip in _vrrp_entry_vips(config_db.get_entry(table, key)):
             owner = vrrp_owned_parent_prefix(vip, parents)
-            if owner is not None and owner == removing:
+            if owner is not None and owner == removing.network:
                 details.append("{} VIP {} (VR Id: {})".format(
                     table, str(vip).split("/")[0], vrid))
     return details
