@@ -1693,6 +1693,61 @@ class TestConfigVRRP(object):
         assert "VRRP VIP 1.0.0.10 (VR Id: 2) is associated with this prefix." in result.output
         assert ('Ethernet64', '1.0.0.1/24') in db.cfgdb.get_table('INTERFACE')
 
+    def test_ip_remove_any_address_on_vrrp_owned_prefix_blocked_v4(self):
+        db = Db()
+        runner = CliRunner()
+        obj = {'config_db': db.cfgdb}
+
+        for addr in ["1.0.0.1/24", "1.0.0.2/24"]:
+            result = runner.invoke(config.config.commands["interface"].commands["ip"].commands["add"],
+                                   ["Ethernet64", addr], obj=obj)
+            assert result.exit_code == 0
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["add"],
+                               ["Ethernet64", "2"], obj=obj)
+        assert result.exit_code == 0
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp"].commands["ip"].commands["add"],
+                               ["Ethernet64", "2", "1.0.0.10"], obj=obj)
+        assert result.exit_code == 0
+
+        for addr in ["1.0.0.1/24", "1.0.0.2/24"]:
+            result = runner.invoke(config.config.commands["interface"].commands["ip"].commands["remove"],
+                                   ["Ethernet64", addr], obj=obj)
+            print(result.exit_code, result.output)
+            assert result.exit_code != 0
+            assert "Cannot remove IP {} from interface Ethernet64".format(addr) in result.output
+            assert "VRRP VIP 1.0.0.10 (VR Id: 2) is associated with this prefix." in result.output
+
+        interface_table = db.cfgdb.get_table('INTERFACE')
+        assert ('Ethernet64', '1.0.0.1/24') in interface_table
+        assert ('Ethernet64', '1.0.0.2/24') in interface_table
+
+    def test_ip_remove_any_address_on_vrrp_owned_prefix_blocked_v6(self):
+        db = Db()
+        runner = CliRunner()
+        obj = {'config_db': db.cfgdb}
+
+        for addr in ["2001:db8::1/64", "2001:db8::2/64"]:
+            result = runner.invoke(config.config.commands["interface"].commands["ip"].commands["add"],
+                                ["Ethernet64", addr], obj=obj)
+            assert result.exit_code == 0
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["add"],
+                            ["Ethernet64", "2"], obj=obj)
+        assert result.exit_code == 0
+        result = runner.invoke(config.config.commands["interface"].commands["vrrp6"].commands["ipv6"].commands["add"],
+                            ["Ethernet64", "2", "2001:db8::10"], obj=obj)
+        assert result.exit_code == 0
+
+        for addr in ["2001:db8::1/64", "2001:db8::2/64"]:
+            result = runner.invoke(config.config.commands["interface"].commands["ip"].commands["remove"],
+                                ["Ethernet64", addr], obj=obj)
+            assert result.exit_code != 0
+            assert "Cannot remove IP {} from interface Ethernet64".format(addr) in result.output
+            assert "VRRP6 VIP 2001:db8::10 (VR Id: 2) is associated with this prefix." in result.output
+
+        interface_table = db.cfgdb.get_table('INTERFACE')
+        assert ('Ethernet64', '2001:db8::1/64') in interface_table
+        assert ('Ethernet64', '2001:db8::2/64') in interface_table
+
     def test_ip_remove_only_covering_prefix_blocked_v4(self):
         db = Db()
         runner = CliRunner()
